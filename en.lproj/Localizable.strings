@@ -25,6 +25,13 @@
 "볼드체 보기" = "Bold Text";
 "보통" = "Normal";
 "굵게" = "Bold";
+"아주 옅게" = "UltraLight";
+"얇게" = "Thin";
+"옅게" = "Light";
+"일반" = "Regular";
+"중간" = "Medium";
+"세미볼드" = "SemiBold";
+"볼드" = "Bold";
 "행간 · 자간" = "Line & Letter Spacing";
 "행간" = "Line Spacing";
 "자간" = "Letter Spacing";

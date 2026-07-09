@@ -233,12 +233,59 @@ struct SettingsView: View {
     }
 
     private var fontFamilyPicker: some View {
-        Picker("서체", selection: $settings.fontFamily) {
-            ForEach(ViewerFontFamily.allCases) { family in
-                Text(family.title).tag(family)
+        Menu {
+            fontFamilyButton(.system)
+
+            Menu {
+                ForEach(ViewerSandollFontWeight.allCases) { weight in
+                    Button {
+                        settings.fontFamily = .appleSDGothicNeo
+                        settings.sandollFontWeight = weight
+                    } label: {
+                        menuSelectionLabel(weight.title,
+                                           isSelected: settings.fontFamily == .appleSDGothicNeo &&
+                                               settings.sandollFontWeight == weight)
+                    }
+                }
+            } label: {
+                menuSelectionLabel(ViewerFontFamily.appleSDGothicNeo.title,
+                                   isSelected: settings.fontFamily == .appleSDGothicNeo)
             }
+
+            fontFamilyButton(.appleMyungjo)
+            fontFamilyButton(.rounded)
+            fontFamilyButton(.monospaced)
+        } label: {
+            settingsMenuRow(title: "서체", value: selectedFontFamilyText)
         }
-        .pickerStyle(.menu)
+    }
+
+    private var selectedFontFamilyText: String {
+        let family = AppLocalization.string(settings.fontFamily.localizationKey,
+                                            comment: "선택된 서체 이름")
+        if settings.fontFamily == .appleSDGothicNeo {
+            let weight = AppLocalization.string(settings.sandollFontWeight.localizationKey,
+                                                comment: "선택된 산돌고딕 굵기")
+            return "\(family) · \(weight)"
+        }
+        return family
+    }
+
+    private func fontFamilyButton(_ family: ViewerFontFamily) -> some View {
+        Button {
+            settings.fontFamily = family
+        } label: {
+            menuSelectionLabel(family.title, isSelected: settings.fontFamily == family)
+        }
+    }
+
+    @ViewBuilder
+    private func menuSelectionLabel(_ title: LocalizedStringKey, isSelected: Bool) -> some View {
+        if isSelected {
+            Label(title, systemImage: "checkmark")
+        } else {
+            Text(title)
+        }
     }
 
     private var boldTextPicker: some View {
@@ -278,6 +325,21 @@ struct SettingsView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func settingsMenuRow(title: LocalizedStringKey, value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.secondary)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     /// 자간(`tracking`)을 지원하지 않는 구버전에서만 보이는 안내 문구.
@@ -339,10 +401,18 @@ struct SettingsView: View {
     }
 
     private func previewFont(size: Double) -> Font {
-        if settings.resolvedIsBoldTextEnabled {
-            return settings.fontFamily.font(size: size, weight: .semibold)
+        if settings.fontFamily == .appleSDGothicNeo {
+            return settings.fontFamily.font(size: size,
+                                            sandollWeight: settings.sandollFontWeight)
         }
-        return settings.fontFamily.font(size: size)
+
+        if settings.resolvedIsBoldTextEnabled {
+            return settings.fontFamily.font(size: size,
+                                            weight: .semibold,
+                                            sandollWeight: settings.sandollFontWeight)
+        }
+        return settings.fontFamily.font(size: size,
+                                        sandollWeight: settings.sandollFontWeight)
     }
 
     /// 앱 버전 문자열 (예: "1.0 (1)"). Info.plist 값을 사용한다.

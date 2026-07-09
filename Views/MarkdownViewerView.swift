@@ -88,6 +88,7 @@ struct MarkdownViewerView: View {
                     MarkdownBlockView(block: block,
                                       baseFontSize: settings.fontSize,
                                       fontFamily: settings.fontFamily,
+                                      sandollFontWeight: settings.sandollFontWeight,
                                       isBoldTextEnabled: settings.resolvedIsBoldTextEnabled,
                                       lineSpacing: settings.lineSpacing,
                                       letterSpacing: settings.letterSpacing)

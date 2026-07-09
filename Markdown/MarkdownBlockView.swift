@@ -6,6 +6,8 @@ struct MarkdownBlockView: View {
     let baseFontSize: Double
     /// 본문 서체 프리셋.
     var fontFamily: ViewerFontFamily = AppSettings.defaultFontFamily
+    /// Apple SD 산돌고딕 Neo 의 기본 굵기.
+    var sandollFontWeight: ViewerSandollFontWeight = AppSettings.defaultSandollFontWeight
     /// 본문과 원본 보기를 더 굵게 표시할지 여부.
     var isBoldTextEnabled = false
     /// 줄 사이 간격 (행간, pt)
@@ -35,7 +37,9 @@ struct MarkdownBlockView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("•")
-                            .font(fontFamily.font(size: baseFontSize, weight: .bold))
+                            .font(fontFamily.font(size: baseFontSize,
+                                                  weight: .bold,
+                                                  sandollWeight: sandollFontWeight))
                             .foregroundColor(.accentColor)
                         Text(inlineAttributed(item))
                             .tracked(letterSpacing)
@@ -51,7 +55,9 @@ struct MarkdownBlockView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, entry in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(entry.marker)
-                            .font(fontFamily.font(size: baseFontSize, weight: markerWeight))
+                            .font(fontFamily.font(size: baseFontSize,
+                                                  weight: markerWeight,
+                                                  sandollWeight: sandollFontWeight))
                             .foregroundColor(.accentColor)
                         Text(inlineAttributed(entry.text))
                             .tracked(letterSpacing)
@@ -105,6 +111,7 @@ struct MarkdownBlockView: View {
                               alt: alt,
                               baseFontSize: baseFontSize,
                               fontFamily: fontFamily,
+                              sandollFontWeight: sandollFontWeight,
                               isBoldTextEnabled: isBoldTextEnabled)
 
         case .divider:
@@ -126,14 +133,22 @@ struct MarkdownBlockView: View {
     }
 
     private func headingFont(level: Int) -> Font {
-        fontFamily.font(size: headingSize(for: level), weight: .bold)
+        fontFamily.font(size: headingSize(for: level),
+                        weight: .bold,
+                        sandollWeight: sandollFontWeight)
     }
 
     private func bodyFont(size: Double) -> Font {
-        if isBoldTextEnabled {
-            return fontFamily.font(size: size, weight: .semibold)
+        if fontFamily == .appleSDGothicNeo {
+            return fontFamily.font(size: size, sandollWeight: sandollFontWeight)
         }
-        return fontFamily.font(size: size)
+
+        if isBoldTextEnabled {
+            return fontFamily.font(size: size,
+                                   weight: .semibold,
+                                   sandollWeight: sandollFontWeight)
+        }
+        return fontFamily.font(size: size, sandollWeight: sandollFontWeight)
     }
 
     private func codeFont(size: Double) -> Font {
@@ -182,6 +197,7 @@ struct MarkdownImageView: View {
     let alt: String?
     let baseFontSize: Double
     let fontFamily: ViewerFontFamily
+    let sandollFontWeight: ViewerSandollFontWeight
     let isBoldTextEnabled: Bool
 
     var body: some View {
@@ -277,9 +293,15 @@ struct MarkdownImageView: View {
     }
 
     private func displayFont(size: Double) -> Font {
-        if isBoldTextEnabled {
-            return fontFamily.font(size: size, weight: .semibold)
+        if fontFamily == .appleSDGothicNeo {
+            return fontFamily.font(size: size, sandollWeight: sandollFontWeight)
         }
-        return fontFamily.font(size: size)
+
+        if isBoldTextEnabled {
+            return fontFamily.font(size: size,
+                                   weight: .semibold,
+                                   sandollWeight: sandollFontWeight)
+        }
+        return fontFamily.font(size: size, sandollWeight: sandollFontWeight)
     }
 }

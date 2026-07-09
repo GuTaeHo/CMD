@@ -42,6 +42,10 @@ enum ViewerFontFamily: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 
     var title: LocalizedStringKey {
+        LocalizedStringKey(localizationKey)
+    }
+
+    var localizationKey: String {
         switch self {
         case .system: return "시스템 서체"
         case .appleSDGothicNeo: return "Apple SD 산돌고딕 Neo"
@@ -51,12 +55,14 @@ enum ViewerFontFamily: String, CaseIterable, Identifiable {
         }
     }
 
-    func font(size: Double, weight: Font.Weight? = nil) -> Font {
+    func font(size: Double,
+              weight: Font.Weight? = nil,
+              sandollWeight: ViewerSandollFontWeight = AppSettings.defaultSandollFontWeight) -> Font {
         switch self {
         case .system:
             return systemFont(size: size, weight: weight, design: .default)
         case .appleSDGothicNeo:
-            return .custom(appleSDGothicNeoName(for: weight), size: size)
+            return .custom(sandollWeight.adjusted(for: weight).postScriptName, size: size)
         case .appleMyungjo:
             return .custom("AppleMyungjo", size: size)
         case .rounded:
@@ -73,11 +79,92 @@ enum ViewerFontFamily: String, CaseIterable, Identifiable {
         return .system(size: size, design: design)
     }
 
-    private func appleSDGothicNeoName(for weight: Font.Weight?) -> String {
-        switch weight {
-        case .bold: return "AppleSDGothicNeo-Bold"
+}
+
+/// Apple SD 산돌고딕 Neo 에서 선택할 수 있는 실제 굵기.
+enum ViewerSandollFontWeight: String, CaseIterable, Identifiable {
+    case ultraLight
+    case thin
+    case light
+    case regular
+    case medium
+    case semibold
+    case bold
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringKey {
+        LocalizedStringKey(localizationKey)
+    }
+
+    var localizationKey: String {
+        switch self {
+        case .ultraLight: return "아주 옅게"
+        case .thin: return "얇게"
+        case .light: return "옅게"
+        case .regular: return "일반"
+        case .medium: return "중간"
+        case .semibold: return "세미볼드"
+        case .bold: return "볼드"
+        }
+    }
+
+    var postScriptName: String {
+        switch self {
+        case .ultraLight: return "AppleSDGothicNeo-UltraLight"
+        case .thin: return "AppleSDGothicNeo-Thin"
+        case .light: return "AppleSDGothicNeo-Light"
+        case .regular: return "AppleSDGothicNeo-Regular"
+        case .medium: return "AppleSDGothicNeo-Medium"
         case .semibold: return "AppleSDGothicNeo-SemiBold"
-        default: return "AppleSDGothicNeo-Regular"
+        case .bold: return "AppleSDGothicNeo-Bold"
+        }
+    }
+
+    func adjusted(for weight: Font.Weight?) -> ViewerSandollFontWeight {
+        guard let weight else { return self }
+
+        switch weight {
+        case .bold:
+            return atLeast(.bold)
+        case .semibold:
+            return heavier().atLeast(.semibold)
+        case .medium:
+            return atLeast(.medium)
+        case .heavy, .black:
+            return .bold
+        case .light:
+            return atLeast(.light)
+        case .thin:
+            return atLeast(.thin)
+        case .ultraLight:
+            return atLeast(.ultraLight)
+        default:
+            return self
+        }
+    }
+
+    private var rank: Int {
+        Self.allCases.firstIndex(of: self) ?? 3
+    }
+
+    private func atLeast(_ minimum: ViewerSandollFontWeight) -> ViewerSandollFontWeight {
+        rank < minimum.rank ? minimum : self
+    }
+
+    private func heavier() -> ViewerSandollFontWeight {
+        let index = min(rank + 1, Self.allCases.count - 1)
+        return Self.allCases[index]
+    }
+
+    static func load(rawValue: String?) -> ViewerSandollFontWeight {
+        guard let rawValue else { return AppSettings.defaultSandollFontWeight }
+
+        switch rawValue {
+        case "extraBold", "heavy":
+            return .bold
+        default:
+            return ViewerSandollFontWeight(rawValue: rawValue) ?? AppSettings.defaultSandollFontWeight
         }
     }
 }
@@ -105,6 +192,7 @@ final class AppSettings: ObservableObject {
     enum Key {
         static let fontSize = "settings.fontSize"
         static let fontFamily = "settings.fontFamily"
+        static let sandollFontWeight = "settings.sandollFontWeight"
         static let boldTextStyle = "settings.boldTextStyle"
         static let isBoldTextEnabled = "settings.isBoldTextEnabled"
         static let lineSpacing = "settings.lineSpacing"
@@ -121,6 +209,11 @@ final class AppSettings: ObservableObject {
     /// 뷰어 본문 서체 프리셋.
     @Published var fontFamily: ViewerFontFamily {
         didSet { UserDefaults.standard.set(fontFamily.rawValue, forKey: Key.fontFamily) }
+    }
+
+    /// Apple SD 산돌고딕 Neo 의 기본 굵기.
+    @Published var sandollFontWeight: ViewerSandollFontWeight {
+        didSet { UserDefaults.standard.set(sandollFontWeight.rawValue, forKey: Key.sandollFontWeight) }
     }
 
     /// 본문과 원본 보기의 굵기 표시 방식.
@@ -156,6 +249,7 @@ final class AppSettings: ObservableObject {
     static let defaultFontSize: Double = 17
     static let fontStep: Double = 1
     static let defaultFontFamily: ViewerFontFamily = .system
+    static let defaultSandollFontWeight: ViewerSandollFontWeight = .regular
     static let defaultBoldTextStyle: ViewerBoldTextStyle = .system
 
     static let minLineSpacing: Double = 0
@@ -171,6 +265,7 @@ final class AppSettings: ObservableObject {
         defaults.register(defaults: [
             Key.fontSize: AppSettings.defaultFontSize,
             Key.fontFamily: AppSettings.defaultFontFamily.rawValue,
+            Key.sandollFontWeight: AppSettings.defaultSandollFontWeight.rawValue,
             Key.boldTextStyle: AppSettings.defaultBoldTextStyle.rawValue,
             Key.lineSpacing: AppSettings.defaultLineSpacing,
             Key.letterSpacing: AppSettings.defaultLetterSpacing,
@@ -180,6 +275,8 @@ final class AppSettings: ObservableObject {
         self.fontSize = defaults.double(forKey: Key.fontSize)
         let storedFontFamily = defaults.string(forKey: Key.fontFamily)
         self.fontFamily = storedFontFamily.flatMap(ViewerFontFamily.init(rawValue:)) ?? .system
+        let storedSandollFontWeight = defaults.string(forKey: Key.sandollFontWeight)
+        self.sandollFontWeight = ViewerSandollFontWeight.load(rawValue: storedSandollFontWeight)
         self.boldTextStyle = Self.loadBoldTextStyle(from: defaults)
         self.lineSpacing = defaults.double(forKey: Key.lineSpacing)
         self.letterSpacing = defaults.double(forKey: Key.letterSpacing)
@@ -253,6 +350,7 @@ final class AppSettings: ObservableObject {
     func resetFont() {
         fontSize = AppSettings.defaultFontSize
         fontFamily = AppSettings.defaultFontFamily
+        sandollFontWeight = AppSettings.defaultSandollFontWeight
         boldTextStyle = AppSettings.defaultBoldTextStyle
     }
 
