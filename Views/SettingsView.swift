@@ -84,9 +84,7 @@ struct SettingsView: View {
                                          value: "\(Int(settings.fontSize)) pt")
                     }
 
-                    Button("기본값으로 되돌리기") {
-                        resetConfirmation = .font
-                    }
+                    resetButton(for: .font)
                 }
 
                 macSection("행간 · 자간") {
@@ -106,9 +104,7 @@ struct SettingsView: View {
 
                     letterSpacingUnavailableNotice
 
-                    Button("기본값으로 되돌리기") {
-                        resetConfirmation = .spacing
-                    }
+                    resetButton(for: .spacing)
                 }
 
                 macSection("화면 모드") {
@@ -171,9 +167,7 @@ struct SettingsView: View {
                                      value: "\(Int(settings.fontSize)) pt")
                 }
 
-                Button("기본값으로 되돌리기") {
-                    resetConfirmation = .font
-                }
+                resetButton(for: .font)
             }
 
             Section("행간 · 자간") {
@@ -193,9 +187,7 @@ struct SettingsView: View {
 
                 letterSpacingUnavailableNotice
 
-                Button("기본값으로 되돌리기") {
-                    resetConfirmation = .spacing
-                }
+                resetButton(for: .spacing)
             }
 
             Section("화면 모드") {
@@ -221,6 +213,15 @@ struct SettingsView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func resetButton(for confirmation: ResetConfirmation) -> some View {
+        Button {
+            resetConfirmation = confirmation
+        } label: {
+            Text("기본값으로 되돌리기")
+                .foregroundColor(.red)
+        }
     }
 
     private func settingsValueRow(title: String, value: String) -> some View {
