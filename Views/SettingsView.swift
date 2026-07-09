@@ -112,6 +112,11 @@ struct SettingsView: View {
                     resetButton(for: .spacing)
                 }
 
+                macSection("뷰어") {
+                    lineCountToggle
+                    lineNumbersToggle
+                }
+
                 macSection("화면 모드") {
                     Picker("화면 모드", selection: $settings.appearanceMode) {
                         ForEach(AppearanceMode.allCases) { mode in
@@ -203,6 +208,11 @@ struct SettingsView: View {
                 resetButton(for: .spacing)
             }
 
+            Section("뷰어") {
+                lineCountToggle
+                lineNumbersToggle
+            }
+
             Section("화면 모드") {
                 Picker("화면 모드", selection: $settings.appearanceMode) {
                     ForEach(AppearanceMode.allCases) { mode in
@@ -286,6 +296,43 @@ struct SettingsView: View {
         } else {
             Text(title)
         }
+    }
+
+    /// 뷰어 하단 줄 수 표기 켜기/끄기 토글.
+    private var lineCountToggle: some View {
+        viewerToggleRow(title: "줄 수 표시",
+                        description: "문서 전체 줄 수를 뷰어 오른쪽 아래에 표시합니다.",
+                        isOn: $settings.showLineCount)
+    }
+
+    /// 마크다운 원본 보기의 줄 번호 표기 켜기/끄기 토글.
+    private var lineNumbersToggle: some View {
+        viewerToggleRow(title: "줄 번호 표시",
+                        description: "마크다운 원본 보기에서 각 줄 왼쪽에 줄 번호를 표시합니다.",
+                        isOn: $settings.showLineNumbers)
+    }
+
+    /// 뷰어 섹션의 토글 행. 제목 아래에 기능 설명을 작은 회색 글씨로 함께 보여준다.
+    /// macOS 는 기본 체크박스 대신 iOS 와 같은 스위치 형태로 맞춘다.
+    private func viewerToggleRow(title: LocalizedStringKey,
+                                 description: LocalizedStringKey,
+                                 isOn: Binding<Bool>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                Spacer()
+                Toggle(title, isOn: isOn)
+                    .labelsHidden()
+                    #if os(macOS)
+                    .toggleStyle(.switch)
+                    #endif
+            }
+            Text(description)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var boldTextPicker: some View {

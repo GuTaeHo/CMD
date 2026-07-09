@@ -36,6 +36,12 @@
 "행간 · 자간" = "Line & Letter Spacing";
 "행간" = "Line Spacing";
 "자간" = "Letter Spacing";
+"뷰어" = "Viewer";
+"줄 수 표시" = "Show Line Count";
+"문서 전체 줄 수를 뷰어 오른쪽 아래에 표시합니다." = "Shows the document's total line count at the bottom right of the viewer.";
+"줄 번호 표시" = "Show Line Numbers";
+"마크다운 원본 보기에서 각 줄 왼쪽에 줄 번호를 표시합니다." = "Shows a line number to the left of each line in Markdown source view.";
+"viewer.line_count" = "%d lines";
 "화면 모드" = "Appearance";
 "언어" = "Language";
 "시스템 언어" = "System Language";
