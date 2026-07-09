@@ -16,33 +16,24 @@ struct MarkdownViewerView: View {
     /// (재파싱하면 블록마다 새 id 가 부여돼 뷰가 재생성되고, 이미지가 다시 로드된다.)
     @State private var blocks: [MarkdownBlock] = []
 
+    /// 긴 원본 텍스트를 한 번에 레이아웃하지 않도록 청크 단위로 나눠 보관한다.
+    @State private var rawChunks: [RawMarkdownChunk] = []
+
+    /// 문서 준비 중 표시 여부.
+    @State private var isPreparingDocument = false
+
     var body: some View {
         ScrollView {
             if showRawMarkdown {
-                Text(file.content)
-                    .font(.system(size: settings.fontSize, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .frame(maxWidth: 760, alignment: .leading)
-                    .frame(maxWidth: .infinity)
+                RawMarkdownSourceView(chunks: rawChunks,
+                                      fontSize: settings.fontSize,
+                                      isBoldTextEnabled: settings.resolvedIsBoldTextEnabled)
             } else {
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(blocks) { block in
-                        MarkdownBlockView(block: block,
-                                          baseFontSize: settings.fontSize,
-                                          lineSpacing: settings.lineSpacing,
-                                          letterSpacing: settings.letterSpacing)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-                .frame(maxWidth: 760, alignment: .leading)
-                .frame(maxWidth: .infinity)
+                renderedMarkdownContent
             }
         }
         .task(id: file.id) {
-            blocks = MarkdownParser.parse(file.content)
+            await prepareDocument()
         }
         .navigationTitle(file.name)
         #if os(iOS)
@@ -84,5 +75,109 @@ struct MarkdownViewerView: View {
         } else {
             SettingsView()
         }
+    }
+
+    @ViewBuilder
+    private var renderedMarkdownContent: some View {
+        if isPreparingDocument && blocks.isEmpty {
+            ProgressView()
+                .frame(maxWidth: .infinity, minHeight: 180)
+        } else {
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(blocks) { block in
+                    MarkdownBlockView(block: block,
+                                      baseFontSize: settings.fontSize,
+                                      fontFamily: settings.fontFamily,
+                                      isBoldTextEnabled: settings.resolvedIsBoldTextEnabled,
+                                      lineSpacing: settings.lineSpacing,
+                                      letterSpacing: settings.letterSpacing)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func prepareDocument() async {
+        let content = file.content
+        isPreparingDocument = true
+
+        async let parsedBlocks = Task.detached(priority: .userInitiated) {
+            MarkdownParser.parse(content)
+        }.value
+
+        async let sourceChunks = Task.detached(priority: .utility) {
+            RawMarkdownChunk.makeChunks(from: content)
+        }.value
+
+        let prepared = await (parsedBlocks, sourceChunks)
+        guard !Task.isCancelled else { return }
+
+        blocks = prepared.0
+        rawChunks = prepared.1
+        isPreparingDocument = false
+    }
+}
+
+/// 원본보기에서 SwiftUI 가 거대한 Text 하나를 계산하지 않도록 나눈 텍스트 조각.
+private struct RawMarkdownChunk: Identifiable, Sendable {
+    let id: Int
+    let text: String
+
+    static func makeChunks(from content: String, linesPerChunk: Int = 80) -> [RawMarkdownChunk] {
+        let normalized = content
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalized.split(separator: "\n", omittingEmptySubsequences: false)
+
+        guard !lines.isEmpty else {
+            return [RawMarkdownChunk(id: 0, text: " ")]
+        }
+
+        var chunks: [RawMarkdownChunk] = []
+        chunks.reserveCapacity((lines.count / linesPerChunk) + 1)
+
+        var index = 0
+        while index < lines.count {
+            let upperBound = min(index + linesPerChunk, lines.count)
+            let chunkText = lines[index..<upperBound].joined(separator: "\n")
+            chunks.append(RawMarkdownChunk(id: chunks.count,
+                                           text: chunkText.isEmpty ? " " : chunkText))
+            index = upperBound
+        }
+
+        return chunks
+    }
+}
+
+/// 긴 원본 마크다운을 필요한 범위부터 점진적으로 렌더링한다.
+private struct RawMarkdownSourceView: View {
+    let chunks: [RawMarkdownChunk]
+    let fontSize: Double
+    let isBoldTextEnabled: Bool
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            ForEach(chunks) { chunk in
+                Text(verbatim: chunk.text)
+                    .font(sourceFont)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .textSelection(.enabled)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .frame(maxWidth: 760, alignment: .leading)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var sourceFont: Font {
+        if isBoldTextEnabled {
+            return .system(size: fontSize, weight: .semibold, design: .monospaced)
+        }
+        return .system(size: fontSize, design: .monospaced)
     }
 }

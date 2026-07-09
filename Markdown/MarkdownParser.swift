@@ -1,7 +1,7 @@
 import Foundation
 
 /// 렌더링 단위가 되는 마크다운 블록의 종류.
-enum MarkdownBlockKind {
+enum MarkdownBlockKind: Sendable {
     case heading(level: Int, text: String)
     case paragraph(text: String)
     case bulletList(items: [String])
@@ -12,13 +12,13 @@ enum MarkdownBlockKind {
     case divider
 }
 
-struct OrderedItem {
+struct OrderedItem: Sendable {
     let marker: String
     let text: String
 }
 
 /// Identifiable 을 위해 종류(kind)를 감싸는 값 타입.
-struct MarkdownBlock: Identifiable {
+struct MarkdownBlock: Identifiable, Sendable {
     let id = UUID()
     let kind: MarkdownBlockKind
 }

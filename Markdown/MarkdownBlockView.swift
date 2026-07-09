@@ -4,6 +4,10 @@ import SwiftUI
 struct MarkdownBlockView: View {
     let block: MarkdownBlock
     let baseFontSize: Double
+    /// 본문 서체 프리셋.
+    var fontFamily: ViewerFontFamily = AppSettings.defaultFontFamily
+    /// 본문과 원본 보기를 더 굵게 표시할지 여부.
+    var isBoldTextEnabled = false
     /// 줄 사이 간격 (행간, pt)
     var lineSpacing: Double = AppSettings.defaultLineSpacing
     /// 글자 사이 간격 (자간, pt)
@@ -14,7 +18,7 @@ struct MarkdownBlockView: View {
         case let .heading(level, text):
             Text(inlineAttributed(text))
                 .tracked(letterSpacing)
-                .font(.system(size: headingSize(for: level), weight: .bold))
+                .font(headingFont(level: level))
                 .lineSpacing(lineSpacing)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, level <= 2 ? 6 : 2)
@@ -22,7 +26,7 @@ struct MarkdownBlockView: View {
         case let .paragraph(text):
             Text(inlineAttributed(text))
                 .tracked(letterSpacing)
-                .font(.system(size: baseFontSize))
+                .font(bodyFont(size: baseFontSize))
                 .lineSpacing(lineSpacing)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -31,11 +35,11 @@ struct MarkdownBlockView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("•")
-                            .font(.system(size: baseFontSize, weight: .bold))
+                            .font(fontFamily.font(size: baseFontSize, weight: .bold))
                             .foregroundColor(.accentColor)
                         Text(inlineAttributed(item))
                             .tracked(letterSpacing)
-                            .font(.system(size: baseFontSize))
+                            .font(bodyFont(size: baseFontSize))
                             .lineSpacing(lineSpacing)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -47,11 +51,11 @@ struct MarkdownBlockView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, entry in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(entry.marker)
-                            .font(.system(size: baseFontSize, weight: .semibold))
+                            .font(fontFamily.font(size: baseFontSize, weight: markerWeight))
                             .foregroundColor(.accentColor)
                         Text(inlineAttributed(entry.text))
                             .tracked(letterSpacing)
-                            .font(.system(size: baseFontSize))
+                            .font(bodyFont(size: baseFontSize))
                             .lineSpacing(lineSpacing)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -62,12 +66,14 @@ struct MarkdownBlockView: View {
             VStack(alignment: .leading, spacing: 4) {
                 if let language {
                     Text(language.uppercased())
-                        .font(.system(size: baseFontSize * 0.7, weight: .semibold, design: .monospaced))
+                        .font(.system(size: baseFontSize * 0.7,
+                                      weight: markerWeight,
+                                      design: .monospaced))
                         .foregroundColor(.secondary)
                 }
                 ScrollView(.horizontal, showsIndicators: false) {
                     Text(code)
-                        .font(.system(size: baseFontSize * 0.9, design: .monospaced))
+                        .font(codeFont(size: baseFontSize * 0.9))
                         .textSelection(.enabled)
                 }
             }
@@ -85,7 +91,7 @@ struct MarkdownBlockView: View {
                     .frame(width: 4)
                 Text(inlineAttributed(text))
                     .tracked(letterSpacing)
-                    .font(.system(size: baseFontSize))
+                    .font(bodyFont(size: baseFontSize))
                     .italic()
                     .foregroundColor(.secondary)
                     .lineSpacing(lineSpacing)
@@ -95,7 +101,11 @@ struct MarkdownBlockView: View {
             .padding(.vertical, 4)
 
         case let .image(source, alt):
-            MarkdownImageView(source: source, alt: alt, baseFontSize: baseFontSize)
+            MarkdownImageView(source: source,
+                              alt: alt,
+                              baseFontSize: baseFontSize,
+                              fontFamily: fontFamily,
+                              isBoldTextEnabled: isBoldTextEnabled)
 
         case .divider:
             Divider()
@@ -113,6 +123,28 @@ struct MarkdownBlockView: View {
         case 4: return baseFontSize * 1.15
         default: return baseFontSize * 1.05
         }
+    }
+
+    private func headingFont(level: Int) -> Font {
+        fontFamily.font(size: headingSize(for: level), weight: .bold)
+    }
+
+    private func bodyFont(size: Double) -> Font {
+        if isBoldTextEnabled {
+            return fontFamily.font(size: size, weight: .semibold)
+        }
+        return fontFamily.font(size: size)
+    }
+
+    private func codeFont(size: Double) -> Font {
+        if isBoldTextEnabled {
+            return .system(size: size, weight: .semibold, design: .monospaced)
+        }
+        return .system(size: size, design: .monospaced)
+    }
+
+    private var markerWeight: Font.Weight {
+        isBoldTextEnabled ? .bold : .semibold
     }
 
     // (이미지 렌더링은 MarkdownImageView 로 분리)
@@ -149,13 +181,15 @@ struct MarkdownImageView: View {
     let source: String
     let alt: String?
     let baseFontSize: Double
+    let fontFamily: ViewerFontFamily
+    let isBoldTextEnabled: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             content
             if let alt, !alt.isEmpty {
                 Text(alt)
-                    .font(.system(size: baseFontSize * 0.8))
+                    .font(displayFont(size: baseFontSize * 0.8))
                     .foregroundColor(.secondary)
             }
         }
@@ -174,7 +208,10 @@ struct MarkdownImageView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 case .failure:
-                    placeholder(systemImage: "photo.badge.exclamationmark", text: "이미지를 불러올 수 없습니다")
+                    placeholder(
+                        systemImage: "photo.badge.exclamationmark",
+                        text: AppLocalization.string("이미지를 불러올 수 없습니다", comment: "이미지 로딩 실패 안내")
+                    )
                 default:
                     ProgressView()
                         .frame(maxWidth: .infinity, minHeight: 120)
@@ -195,7 +232,7 @@ struct MarkdownImageView: View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
             Text(text)
-                .font(.system(size: baseFontSize * 0.85))
+                .font(displayFont(size: baseFontSize * 0.85))
                 .lineLimit(2)
         }
         .foregroundColor(.secondary)
@@ -237,5 +274,12 @@ struct MarkdownImageView: View {
         if source.hasPrefix("file://") { return URL(string: source) }
         if source.hasPrefix("/") { return URL(fileURLWithPath: source) }
         return nil
+    }
+
+    private func displayFont(size: Double) -> Font {
+        if isBoldTextEnabled {
+            return fontFamily.font(size: size, weight: .semibold)
+        }
+        return fontFamily.font(size: size)
     }
 }
