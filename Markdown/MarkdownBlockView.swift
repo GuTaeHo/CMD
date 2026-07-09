@@ -14,6 +14,8 @@ struct MarkdownBlockView: View {
     var lineSpacing: Double = AppSettings.defaultLineSpacing
     /// 글자 사이 간격 (자간, pt)
     var letterSpacing: Double = AppSettings.defaultLetterSpacing
+    /// 서체 설정 변경 시 텍스트 렌더링을 즉시 갱신하기 위한 식별자.
+    var typographyID = ""
 
     var body: some View {
         switch block.kind {
@@ -24,6 +26,7 @@ struct MarkdownBlockView: View {
                 .lineSpacing(lineSpacing)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, level <= 2 ? 6 : 2)
+                .id(typographyID)
 
         case let .paragraph(text):
             Text(inlineAttributed(text))
@@ -31,6 +34,7 @@ struct MarkdownBlockView: View {
                 .font(bodyFont(size: baseFontSize))
                 .lineSpacing(lineSpacing)
                 .fixedSize(horizontal: false, vertical: true)
+                .id(typographyID)
 
         case let .bulletList(items):
             VStack(alignment: .leading, spacing: 6) {
@@ -46,6 +50,7 @@ struct MarkdownBlockView: View {
                             .font(bodyFont(size: baseFontSize))
                             .lineSpacing(lineSpacing)
                             .fixedSize(horizontal: false, vertical: true)
+                            .id("\(typographyID)-\(item)")
                     }
                 }
             }
@@ -64,6 +69,7 @@ struct MarkdownBlockView: View {
                             .font(bodyFont(size: baseFontSize))
                             .lineSpacing(lineSpacing)
                             .fixedSize(horizontal: false, vertical: true)
+                            .id("\(typographyID)-\(entry.text)")
                     }
                 }
             }
@@ -81,6 +87,7 @@ struct MarkdownBlockView: View {
                     Text(code)
                         .font(codeFont(size: baseFontSize * 0.9))
                         .textSelection(.enabled)
+                        .id(typographyID)
                 }
             }
             .padding(12)
@@ -102,6 +109,7 @@ struct MarkdownBlockView: View {
                     .foregroundColor(.secondary)
                     .lineSpacing(lineSpacing)
                     .fixedSize(horizontal: false, vertical: true)
+                    .id(typographyID)
                 Spacer(minLength: 0)
             }
             .padding(.vertical, 4)
@@ -112,7 +120,8 @@ struct MarkdownBlockView: View {
                               baseFontSize: baseFontSize,
                               fontFamily: fontFamily,
                               sandollFontWeight: sandollFontWeight,
-                              isBoldTextEnabled: isBoldTextEnabled)
+                              isBoldTextEnabled: isBoldTextEnabled,
+                              typographyID: typographyID)
 
         case .divider:
             Divider()
@@ -199,6 +208,7 @@ struct MarkdownImageView: View {
     let fontFamily: ViewerFontFamily
     let sandollFontWeight: ViewerSandollFontWeight
     let isBoldTextEnabled: Bool
+    let typographyID: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -207,6 +217,7 @@ struct MarkdownImageView: View {
                 Text(alt)
                     .font(displayFont(size: baseFontSize * 0.8))
                     .foregroundColor(.secondary)
+                    .id(typographyID)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -250,6 +261,7 @@ struct MarkdownImageView: View {
             Text(text)
                 .font(displayFont(size: baseFontSize * 0.85))
                 .lineLimit(2)
+                .id(typographyID)
         }
         .foregroundColor(.secondary)
         .padding(12)

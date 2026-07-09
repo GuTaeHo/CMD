@@ -199,6 +199,8 @@ final class AppSettings: ObservableObject {
         static let letterSpacing = "settings.letterSpacing"
         static let appearanceMode = "settings.appearanceMode"
         static let appLanguage = "settings.appLanguage"
+        static let showLineCount = "settings.showLineCount"
+        static let showLineNumbers = "settings.showLineNumbers"
     }
 
     /// 뷰어 본문 기준 글자 크기 (pt)
@@ -236,6 +238,16 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(appearanceMode.rawValue, forKey: Key.appearanceMode) }
     }
 
+    /// 뷰어에 문서 전체 줄 수를 표시할지 여부.
+    @Published var showLineCount: Bool {
+        didSet { UserDefaults.standard.set(showLineCount, forKey: Key.showLineCount) }
+    }
+
+    /// 마크다운 원본 보기에서 각 줄 옆에 줄 번호를 표시할지 여부.
+    @Published var showLineNumbers: Bool {
+        didSet { UserDefaults.standard.set(showLineNumbers, forKey: Key.showLineNumbers) }
+    }
+
     /// 앱 표시 언어 (시스템/한국어/영어/일본어)
     @Published var appLanguage: AppLanguage {
         didSet {
@@ -260,6 +272,9 @@ final class AppSettings: ObservableObject {
     static let maxLetterSpacing: Double = 4
     static let defaultLetterSpacing: Double = 0
 
+    static let defaultShowLineCount = true
+    static let defaultShowLineNumbers = true
+
     init() {
         let defaults = UserDefaults.standard
         defaults.register(defaults: [
@@ -270,7 +285,9 @@ final class AppSettings: ObservableObject {
             Key.lineSpacing: AppSettings.defaultLineSpacing,
             Key.letterSpacing: AppSettings.defaultLetterSpacing,
             Key.appearanceMode: AppearanceMode.system.rawValue,
-            Key.appLanguage: AppLanguage.system.rawValue
+            Key.appLanguage: AppLanguage.system.rawValue,
+            Key.showLineCount: AppSettings.defaultShowLineCount,
+            Key.showLineNumbers: AppSettings.defaultShowLineNumbers
         ])
         self.fontSize = defaults.double(forKey: Key.fontSize)
         let storedFontFamily = defaults.string(forKey: Key.fontFamily)
@@ -284,6 +301,8 @@ final class AppSettings: ObservableObject {
         self.appearanceMode = storedMode.flatMap(AppearanceMode.init(rawValue:)) ?? .system
         let storedLanguage = defaults.string(forKey: Key.appLanguage)
         self.appLanguage = storedLanguage.flatMap(AppLanguage.init(rawValue:)) ?? .system
+        self.showLineCount = defaults.bool(forKey: Key.showLineCount)
+        self.showLineNumbers = defaults.bool(forKey: Key.showLineNumbers)
         AppLocalization.language = appLanguage
     }
 
@@ -309,6 +328,19 @@ final class AppSettings: ObservableObject {
         case .bold: return true
         case .system: return Self.systemBoldTextEnabled
         }
+    }
+
+    /// 뷰어 텍스트 렌더링을 즉시 갱신하기 위한 식별자.
+    var viewerTypographyID: String {
+        [
+            String(format: "%.2f", fontSize),
+            fontFamily.rawValue,
+            sandollFontWeight.rawValue,
+            boldTextStyle.rawValue,
+            String(resolvedIsBoldTextEnabled),
+            String(format: "%.2f", lineSpacing),
+            String(format: "%.2f", letterSpacing)
+        ].joined(separator: "|")
     }
 
     /// 현재 OS 의 실제 라이트/다크 모드.
