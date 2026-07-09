@@ -49,6 +49,9 @@ struct MarkdownViewerView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
+            #if os(macOS)
+            SidebarToggleToolbarItem()
+            #endif
             ToolbarItem(placement: .primaryAction) {
                 Toggle(isOn: $showRawMarkdown) {
                     Label("마크다운 원본", systemImage: "chevron.left.forwardslash.chevron.right")

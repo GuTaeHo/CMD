@@ -4,12 +4,43 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.dismiss) private var dismiss
+    @State private var resetConfirmation: ResetConfirmation?
 
     var body: some View {
         content
             // sheet 는 별도 presentation 컨텍스트라 RootView 의 preferredColorScheme 가
-            // 전파되지 않는다. 모드 변경이 sheet 안에서도 즉시 반영되도록 여기서도 적용한다.
-            .preferredColorScheme(settings.resolvedColorScheme)
+            // 전파되지 않는다. 시스템 모드일 때도 실제 OS 모드를 명시적으로 적용한다.
+            .preferredColorScheme(settings.resolvedPresentationColorScheme)
+            .alert(item: $resetConfirmation) { confirmation in
+                Alert(
+                    title: Text("초기 설정으로 되돌릴까요?"),
+                    primaryButton: .destructive(Text("되돌리기")) {
+                        confirmation.reset(settings)
+                    },
+                    secondaryButton: .cancel(Text("취소"))
+                )
+            }
+    }
+
+    private enum ResetConfirmation: Identifiable {
+        case font
+        case spacing
+
+        var id: String {
+            switch self {
+            case .font: return "font"
+            case .spacing: return "spacing"
+            }
+        }
+
+        func reset(_ settings: AppSettings) {
+            switch self {
+            case .font:
+                settings.resetFont()
+            case .spacing:
+                settings.resetSpacing()
+            }
+        }
     }
 
     // macOS 와 iOS 는 시트 레이아웃이 달라 각각 다르게 감싼다.
@@ -24,7 +55,7 @@ struct SettingsView: View {
 
             Divider()
 
-            settingsForm
+            macSettingsContent
 
             Divider()
 
@@ -36,6 +67,81 @@ struct SettingsView: View {
             .padding()
         }
         .frame(width: 420, height: 560)
+    }
+
+    /// macOS 의 `Form` 은 라벨/컨트롤 열을 자동 배치하면서 좁은 시트에서 행이 압축될 수 있다.
+    /// 그래서 macOS 설정 화면은 폭을 명시적으로 쓰는 스택 레이아웃으로 구성한다.
+    private var macSettingsContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                macSection("글자 크기") {
+                    fontPreviewRow
+
+                    Stepper(value: $settings.fontSize,
+                            in: AppSettings.minFontSize...AppSettings.maxFontSize,
+                            step: AppSettings.fontStep) {
+                        settingsValueRow(title: "글자 크기",
+                                         value: "\(Int(settings.fontSize)) pt")
+                    }
+
+                    Button("기본값으로 되돌리기") {
+                        resetConfirmation = .font
+                    }
+                }
+
+                macSection("행간 · 자간") {
+                    spacingPreview
+
+                    spacingSlider(title: "행간",
+                                  systemImage: "arrow.up.and.down",
+                                  value: $settings.lineSpacing,
+                                  range: AppSettings.minLineSpacing...AppSettings.maxLineSpacing,
+                                  step: 0.5)
+
+                    spacingSlider(title: "자간",
+                                  systemImage: "arrow.left.and.right",
+                                  value: $settings.letterSpacing,
+                                  range: AppSettings.minLetterSpacing...AppSettings.maxLetterSpacing,
+                                  step: 0.1)
+
+                    letterSpacingUnavailableNotice
+
+                    Button("기본값으로 되돌리기") {
+                        resetConfirmation = .spacing
+                    }
+                }
+
+                macSection("화면 모드") {
+                    Picker("화면 모드", selection: $settings.appearanceMode) {
+                        ForEach(AppearanceMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
+                macSection("정보") {
+                    settingsValueRow(title: "앱 버전", value: Self.appVersion)
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func macSection<Content: View>(_ title: String,
+                                           @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
+
+            VStack(alignment: .leading, spacing: 12) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
     #else
     private var content: some View {
@@ -56,27 +162,17 @@ struct SettingsView: View {
     private var settingsForm: some View {
         Form {
             Section("글자 크기") {
-                HStack {
-                    Text("가나다 Aa")
-                        .font(.system(size: settings.fontSize))
-                    Spacer()
-                }
+                fontPreviewRow
 
                 Stepper(value: $settings.fontSize,
                         in: AppSettings.minFontSize...AppSettings.maxFontSize,
                         step: AppSettings.fontStep) {
-                    HStack {
-                        Text("글자 크기")
-                        Spacer()
-                        Text("\(Int(settings.fontSize)) pt")
-                            .font(.system(size: 16, weight: .semibold))
-                            .monospacedDigit()
-                            .foregroundColor(.secondary)
-                    }
+                    settingsValueRow(title: "글자 크기",
+                                     value: "\(Int(settings.fontSize)) pt")
                 }
 
                 Button("기본값으로 되돌리기") {
-                    settings.resetFont()
+                    resetConfirmation = .font
                 }
             }
 
@@ -98,7 +194,7 @@ struct SettingsView: View {
                 letterSpacingUnavailableNotice
 
                 Button("기본값으로 되돌리기") {
-                    settings.resetSpacing()
+                    resetConfirmation = .spacing
                 }
             }
 
@@ -113,14 +209,30 @@ struct SettingsView: View {
             }
 
             Section {
-                HStack {
-                    Text("앱 버전")
-                    Spacer()
-                    Text(Self.appVersion)
-                        .foregroundColor(.secondary)
-                }
+                settingsValueRow(title: "앱 버전", value: Self.appVersion)
             }
         }
+    }
+
+    private var fontPreviewRow: some View {
+        HStack {
+            Text("가나다 Aa")
+                .font(.system(size: settings.fontSize))
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func settingsValueRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value)
+                .font(.system(size: 16, weight: .semibold))
+                .monospacedDigit()
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// 자간(`tracking`)을 지원하지 않는 구버전에서만 보이는 안내 문구.

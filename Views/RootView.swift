@@ -1,6 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+#if os(macOS)
+import AppKit
+#endif
+
 /// 앱의 최상위 화면. 파일 목록을 네비게이션에 담고 환경설정 시트를 관리한다.
 ///
 /// macOS 에서는 `.sheet` / `.fileImporter` 같은 모달을 사이드바 컬럼(`FileListView`)
@@ -77,6 +81,25 @@ struct PlaceholderDetailView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar {
+            SidebarToggleToolbarItem()
+        }
+    }
+}
+
+/// macOS 사이드바를 접거나 펼치는 툴바 버튼.
+struct SidebarToggleToolbarItem: ToolbarContent {
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Button {
+                NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)),
+                                 to: nil,
+                                 from: nil)
+            } label: {
+                Label("사이드바", systemImage: "sidebar.left")
+            }
+            .help("사이드바 접기/펴기")
+        }
     }
 }
 #endif

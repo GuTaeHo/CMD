@@ -5,7 +5,7 @@ enum SampleContent {
     static let welcome = MarkdownFile(
         name: "환영합니다.md",
         content: """
-        # CMD 에 오신 것을 환영합니다
+        # 안녕하세요!
 
         **CMD** (Cocoa Mark Down) 는 macOS, iPhone, iPad 에서 동작하는
         가벼운 마크다운 *뷰어* 입니다.

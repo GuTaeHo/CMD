@@ -52,11 +52,12 @@ Views/
 ## Architecture notes
 
 - State flows through two `@EnvironmentObject`s created in `CMDApp`:
-  `AppSettings` (persisted to `UserDefaults`) and `DocumentStore` (in-memory
-  list of open documents).
+  `AppSettings` (persisted to `UserDefaults`) and `DocumentStore` (open document
+  list persisted to `UserDefaults`).
 - Files are read **immediately** on selection and cached in `MarkdownFile` to
-  avoid security-scoped-resource issues later; access is wrapped with
-  `startAccessingSecurityScopedResource()`.
+  avoid security-scoped-resource issues later; bookmark data is stored so the
+  list can be restored after relaunch, and access is wrapped with
+  `startAccessingSecurityScopedResource()` when available.
 - `MarkdownParser` is a deliberately lightweight, line-based parser — **not** a
   full CommonMark implementation. It covers headings, paragraphs, bullet/ordered
   lists, code blocks, block quotes, images (Markdown + `<img>`), and horizontal

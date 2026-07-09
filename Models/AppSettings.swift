@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
+import UIKit
+#endif
 
 /// 화면 모드. 라이트 / 다크 / 시스템 3종.
 enum AppearanceMode: String, CaseIterable, Identifiable {
@@ -87,6 +92,24 @@ final class AppSettings: ObservableObject {
     /// 앱 전체에 적용할 색상 스킴. nil 이면 시스템 설정을 따른다.
     var resolvedColorScheme: ColorScheme? {
         appearanceMode.colorScheme
+    }
+
+    /// 시트에 적용할 색상 스킴. 시스템 모드도 현재 OS 설정을 읽어 명시적으로 적용한다.
+    var resolvedPresentationColorScheme: ColorScheme {
+        appearanceMode.colorScheme ?? Self.currentSystemColorScheme
+    }
+
+    /// 현재 OS 의 실제 라이트/다크 모드.
+    private static var currentSystemColorScheme: ColorScheme {
+        #if os(macOS)
+        let match = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua])
+        return match == .darkAqua ? .dark : .light
+        #elseif os(iOS)
+        let style = UIScreen.main.traitCollection.userInterfaceStyle
+        return style == .dark ? .dark : .light
+        #else
+        return .light
+        #endif
     }
 
     func resetFont() {

@@ -8,13 +8,15 @@ struct MarkdownFile: Identifiable, Hashable {
     let content: String
     let url: URL?
     let openedAt: Date
+    let bookmarkData: Data?
 
-    init(id: UUID = UUID(), name: String, content: String, url: URL? = nil, openedAt: Date = Date()) {
+    init(id: UUID = UUID(), name: String, content: String, url: URL? = nil, openedAt: Date = Date(), bookmarkData: Data? = nil) {
         self.id = id
         self.name = name
         self.content = content
         self.url = url
         self.openedAt = openedAt
+        self.bookmarkData = bookmarkData
     }
 
     /// 목록에서 보여줄 미리보기 텍스트 (마크다운 기호를 대충 걷어낸 첫 줄)

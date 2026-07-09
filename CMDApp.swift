@@ -13,5 +13,10 @@ struct CMDApp: App {
                 .preferredColorScheme(settings.resolvedColorScheme)
                 .tint(.primary)
         }
+        #if os(macOS)
+        .commands {
+            SidebarCommands()
+        }
+        #endif
     }
 }
