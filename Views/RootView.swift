@@ -15,18 +15,19 @@ struct RootView: View {
     @EnvironmentObject private var store: DocumentStore
     @State private var isImporterPresented = false
     @State private var isSettingsPresented = false
+    @State private var isNewDocumentPresented = false
+    @State private var isDropTargeted = false
 
-    private var allowedTypes: [UTType] {
-        var types: [UTType] = [.plainText, .text]
-        if let md = UTType(filenameExtension: "md") { types.append(md) }
-        if let markdown = UTType(filenameExtension: "markdown") { types.append(markdown) }
-        return types
+    /// 드롭으로 받는 타입. 파일 URL(파인더)과 문서 내용 표현(파일 앱)을 모두 허용한다.
+    private var dropTypes: [UTType] {
+        [.fileURL] + DocumentStore.supportedTypes
     }
 
     var body: some View {
         NavigationView {
             FileListView(isImporterPresented: $isImporterPresented,
-                         isSettingsPresented: $isSettingsPresented)
+                         isSettingsPresented: $isSettingsPresented,
+                         isNewDocumentPresented: $isNewDocumentPresented)
                 // macOS 사이드바(파일 목록) 너비 제한.
                 #if os(macOS)
                 .frame(minWidth: 220, idealWidth: 260, maxWidth: 320)
@@ -46,9 +47,12 @@ struct RootView: View {
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView()
         }
+        .sheet(isPresented: $isNewDocumentPresented) {
+            NewDocumentView()
+        }
         .fileImporter(
             isPresented: $isImporterPresented,
-            allowedContentTypes: allowedTypes,
+            allowedContentTypes: DocumentStore.supportedTypes,
             allowsMultipleSelection: true
         ) { result in
             switch result {
@@ -65,6 +69,34 @@ struct RootView: View {
             Button("확인", role: .cancel) { store.lastError = nil }
         } message: {
             Text(store.lastError ?? "")
+        }
+        // 파인더/파일 앱에서 창 위로 마크다운 파일을 끌어다 놓으면 바로 연다.
+        .onDrop(of: dropTypes, isTargeted: $isDropTargeted) { providers in
+            store.importDropped(providers: providers)
+        }
+        .overlay(dropTargetOverlay)
+    }
+
+    /// 드롭 대상 위에 파일을 끌고 있는 동안 표시하는 안내 오버레이.
+    @ViewBuilder
+    private var dropTargetOverlay: some View {
+        if isDropTargeted {
+            ZStack {
+                Color.accentColor.opacity(0.08)
+                VStack(spacing: 12) {
+                    Image(systemName: "arrow.down.doc")
+                        .font(.system(size: 44))
+                    Text("여기에 놓아 문서 열기")
+                        .font(.headline)
+                }
+                .foregroundColor(.accentColor)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8]))
+                    .padding(8)
+            )
+            .allowsHitTesting(false)
         }
     }
 }

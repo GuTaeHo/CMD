@@ -8,6 +8,7 @@ struct FileListView: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var isImporterPresented: Bool
     @Binding var isSettingsPresented: Bool
+    @Binding var isNewDocumentPresented: Bool
 
     var body: some View {
         Group {
@@ -16,6 +17,10 @@ struct FileListView: View {
             } else {
                 fileList
             }
+        }
+        // 새 문서 작성 플로팅 버튼 (우측 하단)
+        .overlay(alignment: .bottomTrailing) {
+            newDocumentButton
         }
         .navigationTitle("CMD")
         .toolbar {
@@ -30,9 +35,42 @@ struct FileListView: View {
                 Button {
                     isImporterPresented = true
                 } label: {
-                    Label("파일 열기", systemImage: "plus")
+                    Label("파일 열기", systemImage: "folder")
                 }
             }
+        }
+    }
+
+    /// 새 마크다운 문서 작성 화면을 여는 플로팅 버튼.
+    private var newDocumentButton: some View {
+        newDocumentButtonBase
+            .padding(20)
+            .accessibilityLabel(Text("새 문서 만들기"))
+            .help("새 문서 만들기")
+    }
+
+    /// 시스템 filled 스타일(.borderedProminent)에 원형 보더 셰이프를 적용한 버튼.
+    /// .circle 은 iOS 17 / macOS 14 부터 지원되므로 이전 OS 는 capsule 로 대체한다.
+    @ViewBuilder
+    private var newDocumentButtonBase: some View {
+        let base = Button {
+            isNewDocumentPresented = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 22, weight: .semibold))
+                .frame(width: 24, height: 24)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+
+        if #available(iOS 17.0, macOS 14.0, *) {
+            base.buttonBorderShape(.circle)
+        } else {
+            #if os(iOS)
+            base.buttonBorderShape(.capsule)
+            #else
+            base
+            #endif
         }
     }
 
@@ -47,7 +85,8 @@ struct FileListView: View {
     private var fileList: some View {
         List {
             ForEach(store.files) { file in
-                NavigationLink {
+                // selection 바인딩을 쓰면 파일을 가져온 직후 store 가 선택을 지정해 바로 열 수 있다.
+                NavigationLink(tag: file.id, selection: $store.selectedFileID) {
                     MarkdownViewerView(file: file)
                 } label: {
                     FileRow(file: file)
@@ -73,7 +112,7 @@ struct FileListView: View {
             Button {
                 isImporterPresented = true
             } label: {
-                Label("마크다운 파일 열기", systemImage: "plus")
+                Label("마크다운 파일 열기", systemImage: "folder")
             }
             .buttonStyle(.borderedProminent)
         }

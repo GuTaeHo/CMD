@@ -2,6 +2,7 @@
 "파일 열기" = "Open File";
 "열린 문서가 없습니다" = "No open documents";
 "마크다운 파일 열기" = "Open Markdown File";
+"여기에 놓아 문서 열기" = "Drop here to open document";
 "삭제" = "Delete";
 "오류" = "Error";
 "확인" = "OK";
@@ -56,3 +57,12 @@
 "document.open.error" = "\"%@\" could not be opened: %@";
 "document.load_saved.error" = "Saved file list could not be loaded: %@";
 "document.save.error" = "File list could not be saved: %@";
+"새 문서 만들기" = "Create New Document";
+"새 마크다운 문서" = "New Markdown Document";
+"문서 이름" = "Document Name";
+"내용을 입력하세요" = "Enter your content";
+"저장" = "Save";
+"새 문서" = "New Document";
+"편집" = "Edit";
+"문서 편집" = "Edit Document";
+"document.write.error" = "Could not save to \"%@\" (changes are kept in the app): %@";
