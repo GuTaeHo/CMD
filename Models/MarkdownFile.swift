@@ -32,6 +32,6 @@ struct MarkdownFile: Identifiable, Hashable {
                 .trimmingCharacters(in: .whitespaces)
             if !stripped.isEmpty { return stripped }
         }
-        return "빈 문서"
+        return AppLocalization.string("빈 문서", comment: "문서에 표시할 내용이 없을 때의 미리보기")
     }
 }

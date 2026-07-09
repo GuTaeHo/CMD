@@ -26,7 +26,11 @@ final class DocumentStore: ObservableObject {
                 let file = try readFile(at: url)
                 add(file)
             } catch {
-                lastError = "\"\(url.lastPathComponent)\" 파일을 열 수 없습니다: \(error.localizedDescription)"
+                lastError = AppLocalization.string(
+                    "document.open.error",
+                    arguments: [url.lastPathComponent, error.localizedDescription],
+                    comment: "파일 열기 실패 오류"
+                )
             }
         }
     }
@@ -74,7 +78,11 @@ final class DocumentStore: ObservableObject {
                 .decode([SavedFile].self, from: data)
                 .map(restoreFile)
         } catch {
-            lastError = "저장된 파일 목록을 불러올 수 없습니다: \(error.localizedDescription)"
+            lastError = AppLocalization.string(
+                "document.load_saved.error",
+                arguments: [error.localizedDescription],
+                comment: "저장된 파일 목록 복원 실패 오류"
+            )
             return nil
         }
     }
@@ -112,7 +120,11 @@ final class DocumentStore: ObservableObject {
             let data = try JSONEncoder().encode(savedFiles)
             userDefaults.set(data, forKey: Self.storageKey)
         } catch {
-            lastError = "파일 목록을 저장할 수 없습니다: \(error.localizedDescription)"
+            lastError = AppLocalization.string(
+                "document.save.error",
+                arguments: [error.localizedDescription],
+                comment: "파일 목록 저장 실패 오류"
+            )
         }
     }
 

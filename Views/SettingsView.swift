@@ -11,6 +11,7 @@ struct SettingsView: View {
             // sheet 는 별도 presentation 컨텍스트라 RootView 의 preferredColorScheme 가
             // 전파되지 않는다. 시스템 모드일 때도 실제 OS 모드를 명시적으로 적용한다.
             .preferredColorScheme(settings.resolvedPresentationColorScheme)
+            .environment(\.locale, settings.resolvedLocale)
             .alert(item: $resetConfirmation) { confirmation in
                 Alert(
                     title: Text("초기 설정으로 되돌릴까요?"),
@@ -77,6 +78,10 @@ struct SettingsView: View {
                 macSection("글자 크기") {
                     fontPreviewRow
 
+                    fontFamilyPicker
+
+                    boldTextPicker
+
                     Stepper(value: $settings.fontSize,
                             in: AppSettings.minFontSize...AppSettings.maxFontSize,
                             step: AppSettings.fontStep) {
@@ -117,6 +122,10 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
 
+                macSection("언어") {
+                    languagePicker
+                }
+
                 macSection("정보") {
                     settingsValueRow(title: "앱 버전", value: Self.appVersion)
                 }
@@ -126,7 +135,7 @@ struct SettingsView: View {
         }
     }
 
-    private func macSection<Content: View>(_ title: String,
+    private func macSection<Content: View>(_ title: LocalizedStringKey,
                                            @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
@@ -159,6 +168,10 @@ struct SettingsView: View {
         Form {
             Section("글자 크기") {
                 fontPreviewRow
+
+                fontFamilyPicker
+
+                boldTextPicker
 
                 Stepper(value: $settings.fontSize,
                         in: AppSettings.minFontSize...AppSettings.maxFontSize,
@@ -200,6 +213,10 @@ struct SettingsView: View {
                 .labelsHidden()
             }
 
+            Section("언어") {
+                languagePicker
+            }
+
             Section {
                 settingsValueRow(title: "앱 버전", value: Self.appVersion)
             }
@@ -209,10 +226,28 @@ struct SettingsView: View {
     private var fontPreviewRow: some View {
         HStack {
             Text("가나다 Aa")
-                .font(.system(size: settings.fontSize))
+                .font(previewFont(size: settings.fontSize))
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var fontFamilyPicker: some View {
+        Picker("서체", selection: $settings.fontFamily) {
+            ForEach(ViewerFontFamily.allCases) { family in
+                Text(family.title).tag(family)
+            }
+        }
+        .pickerStyle(.menu)
+    }
+
+    private var boldTextPicker: some View {
+        Picker("볼드체 보기", selection: $settings.boldTextStyle) {
+            ForEach(ViewerBoldTextStyle.allCases) { style in
+                Text(style.title).tag(style)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     private func resetButton(for confirmation: ResetConfirmation) -> some View {
@@ -224,7 +259,16 @@ struct SettingsView: View {
         }
     }
 
-    private func settingsValueRow(title: String, value: String) -> some View {
+    private var languagePicker: some View {
+        Picker("언어", selection: $settings.appLanguage) {
+            ForEach(AppLanguage.allCases) { language in
+                Text(language.title).tag(language)
+            }
+        }
+        .pickerStyle(.menu)
+    }
+
+    private func settingsValueRow(title: LocalizedStringKey, value: String) -> some View {
         HStack {
             Text(title)
             Spacer()
@@ -248,14 +292,18 @@ struct SettingsView: View {
             #else
             let requirement = "iOS 16"
             #endif
-            Text("자간 조정은 \(requirement) 이상에서 지원합니다.")
+            Text(AppLocalization.string(
+                "자간 조정은 %@ 이상에서 지원합니다.",
+                arguments: [requirement],
+                comment: "자간 기능을 지원하는 최소 OS 버전 안내"
+            ))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
         }
     }
 
     /// 행간/자간 조절용 슬라이더 행. 현재 값(pt)을 함께 표시한다.
-    private func spacingSlider(title: String, systemImage: String,
+    private func spacingSlider(title: LocalizedStringKey, systemImage: String,
                                value: Binding<Double>,
                                range: ClosedRange<Double>, step: Double) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -274,7 +322,7 @@ struct SettingsView: View {
     /// 행간·자간 조정 결과를 미리 보여주는 예시 텍스트.
     private var spacingPreview: some View {
         previewText
-            .font(.system(size: settings.fontSize))
+            .font(previewFont(size: settings.fontSize))
             .lineSpacing(settings.lineSpacing)
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
@@ -282,12 +330,19 @@ struct SettingsView: View {
 
     /// 자간 적용 예시 텍스트. `tracking` 은 iOS 16 / macOS 13 이상에서만 지원한다.
     private var previewText: Text {
-        let sample = Text("가나다라마 ABCabc\n행간과 자간 미리보기")
+        let sample = Text(AppLocalization.string("settings.spacing.preview", comment: "행간과 자간 설정 미리보기 문구"))
         if #available(iOS 16.0, macOS 13.0, *) {
             return sample.tracking(settings.letterSpacing)
         } else {
             return sample
         }
+    }
+
+    private func previewFont(size: Double) -> Font {
+        if settings.resolvedIsBoldTextEnabled {
+            return settings.fontFamily.font(size: size, weight: .semibold)
+        }
+        return settings.fontFamily.font(size: size)
     }
 
     /// 앱 버전 문자열 (예: "1.0 (1)"). Info.plist 값을 사용한다.

@@ -10,6 +10,7 @@ struct CMDApp: App {
             RootView()
                 .environmentObject(settings)
                 .environmentObject(store)
+                .environment(\.locale, settings.resolvedLocale)
                 .preferredColorScheme(settings.resolvedColorScheme)
                 .tint(.primary)
         }
