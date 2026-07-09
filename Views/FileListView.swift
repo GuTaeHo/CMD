@@ -52,10 +52,12 @@ struct FileListView: View {
                 } label: {
                     FileRow(file: file)
                 }
-            }
-            .onDelete { indexSet in
-                for index in indexSet {
-                    store.remove(store.files[index])
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        store.remove(file)
+                    } label: {
+                        Label("삭제", systemImage: "trash")
+                    }
                 }
             }
         }
